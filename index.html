@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Witches Realm</title>
+  <title>Witches Realm - The Spell</title>
   <style>
     * {
       box-sizing: border-box;
@@ -29,7 +29,7 @@
       overflow: hidden;
     }
 
-    /* Video background styling */
+    /* Video background layers */
     .bg-layer {
       position: absolute;
       top: 0;
@@ -37,8 +37,33 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.8s ease;
+      transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.8s ease, opacity 0.8s ease;
       z-index: 1;
+    }
+
+    .video-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease-in-out;
+    }
+
+    .video-layer.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #crystalMedia {
+      z-index: 2;
+    }
+
+    #oggyMedia {
+      z-index: 3;
     }
 
     /* Invisible click zone directly over the 'Summon Trouble' button */
@@ -55,7 +80,7 @@
       cursor: pointer;
       z-index: 10;
       outline: none;
-      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+      transition: box-shadow 0.3s ease, border-color 0.3s ease, opacity 0.4s ease;
     }
 
     .summon-trigger:hover {
@@ -74,103 +99,500 @@
       transition: opacity 0.7s ease;
     }
 
-    /* Manuscript modal */
-    .manuscript-modal {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.6);
-      width: min(580px, 90vw);
-      padding: 40px;
-      background: #eadebe;
-      border: 3px double #58331d;
-      border-radius: 6px;
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(168, 85, 247, 0.6);
-      opacity: 0;
-      pointer-events: none;
-      z-index: 20;
-      text-align: center;
-      color: #2b1d0c;
-      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .manuscript-modal h2 {
-      font-size: 2rem;
-      margin-bottom: 14px;
-      letter-spacing: 2px;
-    }
-
-    .manuscript-modal p {
-      font-size: 1.1rem;
-      margin-bottom: 24px;
-      line-height: 1.6;
-    }
-
-    .start-btn {
-      background: #381a4a;
-      border: 1px solid #c084fc;
-      color: #f3e8ff;
-      padding: 10px 24px;
-      font-size: 1rem;
-      letter-spacing: 1px;
-      cursor: pointer;
-      border-radius: 4px;
-      transition: transform 0.2s ease, background-color 0.2s ease;
-    }
-
-    .start-btn:hover {
-      background: #582177;
-      transform: scale(1.05);
-    }
-
     /* Zoom into the crystal ball on click */
-    .zoom-in-ball .bg-layer {
+    .zoom-in-ball #bgMedia {
       transform: scale(2.6) translateY(12%);
-      filter: blur(3px);
+      filter: blur(4px);
     }
 
     .zoom-in-ball .orb-flash {
       opacity: 0.85;
     }
 
-    .manuscript-modal.active {
+    /* Skip Cutscene Button */
+    .skip-btn {
+      position: absolute;
+      top: 24px;
+      right: 28px;
+      z-index: 25;
+      background: rgba(14, 8, 26, 0.72);
+      border: 1px solid rgba(192, 132, 252, 0.45);
+      color: #eeddff;
+      padding: 9px 20px;
+      border-radius: 24px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease, background 0.3s ease, transform 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .skip-btn.visible {
+      opacity: 0.85;
+      pointer-events: auto;
+    }
+
+    .skip-btn:hover {
+      opacity: 1;
+      background: rgba(126, 34, 206, 0.75);
+      border-color: rgba(216, 180, 254, 0.9);
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+      transform: scale(1.05);
+    }
+
+    /* Spell Stage / Image Viewer */
+    .spell-stage {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at 50% 40%, #1a0a2c 0%, #080312 85%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+      overflow: hidden;
+      padding: 16px;
+    }
+
+    .spell-stage.active {
       opacity: 1;
       pointer-events: auto;
-      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .spell-image-wrapper {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-height: 84vh;
+      max-width: 92vw;
+    }
+
+    .spell-image {
+      max-height: 84vh;
+      max-width: 92vw;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 18px;
+      box-shadow: 0 0 45px rgba(168, 85, 247, 0.5), 0 20px 50px rgba(0, 0, 0, 0.95);
+      border: 1px solid rgba(216, 180, 254, 0.25);
+      transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .spell-image.animating {
+      opacity: 0.2;
+      transform: scale(0.97);
+    }
+
+    /* Floating navigation arrows */
+    .nav-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: rgba(22, 12, 38, 0.82);
+      border: 2px solid rgba(216, 180, 254, 0.6);
+      color: #f5edff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      outline: none;
+      z-index: 35;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.5);
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .nav-arrow:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.9), rgba(126, 34, 206, 0.95));
+      box-shadow: 0 0 35px rgba(192, 132, 252, 0.9);
+      transform: translateY(-50%) scale(1.12);
+      border-color: #fff;
+    }
+
+    .nav-arrow:active:not(:disabled) {
+      transform: translateY(-50%) scale(0.95);
+    }
+
+    .nav-arrow:disabled {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .nav-arrow.left-arrow {
+      left: 32px;
+    }
+
+    .nav-arrow.right-arrow {
+      right: 32px;
+    }
+
+    /* Bottom Control Bar */
+    .bottom-bar {
+      position: absolute;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 35;
+      background: rgba(18, 9, 32, 0.85);
+      border: 1px solid rgba(192, 132, 252, 0.4);
+      padding: 8px 24px;
+      border-radius: 40px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(168, 85, 247, 0.3);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .step-indicator {
+      color: #e9d5ff;
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      font-weight: 600;
+      min-width: 65px;
+      text-align: center;
+    }
+
+    .bar-btn {
+      background: transparent;
+      border: none;
+      color: #c084fc;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      border-radius: 50%;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .bar-btn:hover:not(:disabled) {
+      color: #fff;
+      transform: scale(1.18);
+    }
+
+    .bar-btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    .restart-btn {
+      display: none;
+      background: linear-gradient(135deg, #7e22ce, #a855f7);
+      color: #fff;
+      border: 1px solid #d8b4fe;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.6);
+      transition: all 0.25s ease;
+    }
+
+    .restart-btn.show {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .restart-btn:hover {
+      transform: scale(1.06);
+      box-shadow: 0 0 30px rgba(192, 132, 252, 0.9);
+    }
+
+    @media (max-width: 768px) {
+      .nav-arrow.left-arrow {
+        left: 10px;
+        width: 46px;
+        height: 46px;
+      }
+      .nav-arrow.right-arrow {
+        right: 10px;
+        width: 46px;
+        height: 46px;
+      }
+      .spell-image {
+        max-height: 80vh;
+      }
     }
   </style>
 </head>
 <body>
 
 <div class="hero-container" id="hero">
-  <video class="bg-layer" id="bgMedia" autoplay muted loop playsinline>
+  <!-- 1. Initial background video: Two witches with crystal ball -->
+  <video class="bg-layer" id="bgMedia" autoplay muted loop playsinline preload="auto">
     <source src="witches_bg.mp4" type="video/mp4" />
     Your browser does not support the video tag.
   </video>
 
-  <button id="summonBtn" class="summon-trigger" title="Click to summon"></button>
+  <!-- 2. Crystal ball cutscene video: Scroll emerges saying "Conjure a number... silently." -->
+  <video class="video-layer" id="crystalMedia" playsinline preload="auto">
+    <source src="Crystal_ball.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
 
+  <!-- 3. Oggy chasing cockroaches video: Cockroaches steal crystal ball and UFO escape -->
+  <video class="video-layer" id="oggyMedia" playsinline preload="auto">
+    <source src="oggy chasing cocos.mp4" type="video/mp4" />
+    Your browser does not support the video tag.
+  </video>
+
+  <!-- Click zone directly over the "SUMMON TROUBLE" in the initial video -->
+  <button id="summonBtn" class="summon-trigger" title="Click to summon trouble"></button>
+
+  <!-- Atmospheric purple flash overlay -->
   <div id="orbFlash" class="orb-flash"></div>
 
-  <div id="manuscriptModal" class="manuscript-modal">
-    <h2>Welcome, Adventurer</h2>
-    <p>The incantation has begun. Darkness stirs within the crystal glass...</p>
-    <button class="start-btn">Enter the Realm</button>
+  <!-- Skip cutscene button -->
+  <button id="skipCutsceneBtn" class="skip-btn" title="Skip to next scene">Skip ⏭</button>
+
+  <!-- 4. Spell Stage: Images 1 to 9 interactive slideshow -->
+  <div class="spell-stage" id="spellStage">
+    <!-- Floating Side Navigation Arrows -->
+    <button id="sidePrevBtn" class="nav-arrow left-arrow" aria-label="Previous step" title="Previous step" disabled>
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+
+    <div class="spell-image-wrapper">
+      <img id="spellImage" src="1.png" alt="The Witch's Spell" class="spell-image" title="Click to advance" />
+    </div>
+
+    <button id="sideNextBtn" class="nav-arrow right-arrow" aria-label="Next step" title="Next step">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+
+    <!-- Bottom Controls & Step Counter -->
+    <div class="bottom-bar">
+      <button id="prevBtn" class="bar-btn" aria-label="Previous image" title="Previous step" disabled>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <div class="step-indicator" id="stepCounter">1 / 9</div>
+
+      <button id="nextBtn" class="bar-btn" aria-label="Next image" title="Next step">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+
+      <button id="restartBtn" class="restart-btn" title="Restart from beginning">
+        <span>Restart ↺</span>
+      </button>
+    </div>
   </div>
 </div>
 
 <script>
   const summonBtn = document.getElementById('summonBtn');
   const hero = document.getElementById('hero');
-  const manuscript = document.getElementById('manuscriptModal');
+  const bgMedia = document.getElementById('bgMedia');
+  const crystalMedia = document.getElementById('crystalMedia');
+  const oggyMedia = document.getElementById('oggyMedia');
+  const orbFlash = document.getElementById('orbFlash');
+  const skipBtn = document.getElementById('skipCutsceneBtn');
+  const spellStage = document.getElementById('spellStage');
+  const spellImage = document.getElementById('spellImage');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const sidePrevBtn = document.getElementById('sidePrevBtn');
+  const sideNextBtn = document.getElementById('sideNextBtn');
+  const stepCounter = document.getElementById('stepCounter');
+  const restartBtn = document.getElementById('restartBtn');
 
+  const images = [
+    '1.png',
+    '2.png',
+    '3.png',
+    '4.png',
+    '5.png',
+    '6.png',
+    '7.png',
+    '8.png',
+    '9.png'
+  ];
+
+  let currentImageIndex = 0;
+  let currentPhase = 'idle'; // 'idle' | 'crystal' | 'oggy' | 'slideshow'
+
+  // Preload all spell images in background
+  images.forEach(src => {
+    const img = new Image();
+    img.src = src;
+  });
+
+  // Helper function to safely play video with audio (falls back to muted if policy blocks)
+  function playVideoSafely(videoEl) {
+    videoEl.currentTime = 0;
+    const playPromise = videoEl.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        videoEl.muted = true;
+        videoEl.play();
+      });
+    }
+  }
+
+  // 1. Initial trigger: Click "Summon Trouble" -> Play crystal ball video
   summonBtn.addEventListener('click', () => {
+    currentPhase = 'crystal';
     summonBtn.style.pointerEvents = 'none';
+    summonBtn.style.opacity = '0';
+
+    // Cinematic zoom on crystal ball in initial video
     hero.classList.add('zoom-in-ball');
+    skipBtn.classList.add('visible');
 
     setTimeout(() => {
-      manuscript.classList.add('active');
+      crystalMedia.classList.add('active');
+      playVideoSafely(crystalMedia);
     }, 450);
+
+    setTimeout(() => {
+      orbFlash.style.opacity = '0';
+      bgMedia.pause();
+    }, 900);
+  });
+
+  // 2. Play Oggy Chasing Cockroaches video after Crystal Ball video ends
+  function playOggyCutscene() {
+    currentPhase = 'oggy';
+    crystalMedia.classList.remove('active');
+    crystalMedia.pause();
+
+    oggyMedia.classList.add('active');
+    playVideoSafely(oggyMedia);
+  }
+
+  crystalMedia.addEventListener('ended', playOggyCutscene);
+
+  // 3. Display images 1 to 9 after Oggy Chasing Cockroaches video ends
+  function startImageSlideshow() {
+    currentPhase = 'slideshow';
+    oggyMedia.classList.remove('active');
+    oggyMedia.pause();
+    skipBtn.classList.remove('visible');
+
+    spellStage.classList.add('active');
+    showImage(0);
+  }
+
+  oggyMedia.addEventListener('ended', startImageSlideshow);
+
+  // Skip cutscene button handler
+  skipBtn.addEventListener('click', () => {
+    if (currentPhase === 'crystal') {
+      playOggyCutscene();
+    } else if (currentPhase === 'oggy') {
+      startImageSlideshow();
+    }
+  });
+
+  // 4. Image Slideshow Navigation (Images 1 to 9 with right arrow click)
+  function showImage(index) {
+    if (index < 0 || index >= images.length) return;
+    currentImageIndex = index;
+
+    // Smooth subtle fade between slides
+    spellImage.classList.add('animating');
+    setTimeout(() => {
+      spellImage.src = images[currentImageIndex];
+      spellImage.classList.remove('animating');
+    }, 120);
+
+    stepCounter.textContent = `${currentImageIndex + 1} / ${images.length}`;
+
+    const hasPrev = currentImageIndex > 0;
+    const hasNext = currentImageIndex < images.length - 1;
+
+    sidePrevBtn.disabled = !hasPrev;
+    prevBtn.disabled = !hasPrev;
+
+    if (hasNext) {
+      sideNextBtn.style.display = 'flex';
+      nextBtn.style.display = 'flex';
+      restartBtn.classList.remove('show');
+    } else {
+      // Reached the final answer (9.png)
+      sideNextBtn.style.display = 'none';
+      nextBtn.style.display = 'none';
+      restartBtn.classList.add('show');
+    }
+  }
+
+  function advanceToNext() {
+    if (currentImageIndex < images.length - 1) {
+      showImage(currentImageIndex + 1);
+    }
+  }
+
+  function goToPrevious() {
+    if (currentImageIndex > 0) {
+      showImage(currentImageIndex - 1);
+    }
+  }
+
+  // Right arrow button clicks
+  nextBtn.addEventListener('click', advanceToNext);
+  sideNextBtn.addEventListener('click', advanceToNext);
+
+  // Left arrow button clicks
+  prevBtn.addEventListener('click', goToPrevious);
+  sidePrevBtn.addEventListener('click', goToPrevious);
+
+  // Clicking on the image directly also advances to the next image
+  spellImage.addEventListener('click', () => {
+    if (currentImageIndex < images.length - 1) {
+      advanceToNext();
+    }
+  });
+
+  // Keyboard navigation: ArrowRight / Space advances, ArrowLeft goes back
+  window.addEventListener('keydown', (e) => {
+    if (currentPhase !== 'slideshow') return;
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      advanceToNext();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goToPrevious();
+    }
+  });
+
+  // Restart journey back to the beginning
+  restartBtn.addEventListener('click', () => {
+    currentPhase = 'idle';
+    spellStage.classList.remove('active');
+    hero.classList.remove('zoom-in-ball');
+    orbFlash.style.opacity = '';
+    summonBtn.style.pointerEvents = '';
+    summonBtn.style.opacity = '';
+    bgMedia.currentTime = 0;
+    bgMedia.play();
+    currentImageIndex = 0;
   });
 </script>
 
